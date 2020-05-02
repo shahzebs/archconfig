@@ -1,0 +1,111 @@
+#!/bin/bash
+
+echo -e "\n### Welcome to the Arch Linux install script made by shahzebs ###\n"
+
+echo -e "Checkpoint 1/5\nFollowing changes will be made:"
+echo -e "\t- Update system clock"
+echo -e "\t- Partition the disks"
+read -p "Press any key to continue or ^C to abort..."
+
+timedatectl set-ntp true
+
+lsblk
+read -p "Which device do you want to use? " device
+[ -z "$device" ] && echo "Aborted.." && exit
+fdisk /dev/$device
+lsblk
+[ "$device" == *"nvme"* ] && device+="p"
+
+read -p "Enter partition number in order of root, swap, and EFI (if applicable), e.g. 231 or 12: " partitions
+[ -z "$partitions" ] && echo "Aborted.." && exit
+rootp=$(echo $partitions | cut -c 1)
+swapp=$(echo $partitions | cut -c 2)
+efip=$(echo $partitions | cut -c 3)
+
+echo -e "\nFollowing changes will be made:"
+echo -e "\t- Format the partitions"
+echo -e "\t- Mount the file systems"
+echo -e "\t- Select the mirrors"
+read -p "Press any key to continue or ^C to abort..."
+
+mkfs.ext4 /dev/$device$rootp
+mkswap /dev/$device$swapp
+swapon /dev/$device$swapp
+[ -n "$efip" ] && mkfs.fat -F32 /dev/$device$efip
+
+mount /dev/$device$rootp /mnt
+[ -n "$efip" ] && mkdir /mnt/efi && mount /dev/$device$efip /mnt/efi
+
+vim /etc/pacman.d/mirrorlist
+
+echo -e "\nCheckpoint 2/5\nFollowing changes will be made:"
+echo -e "\t- Install essential packages"
+echo -e "\t- Fstab"
+read -p "Press any key to continue or ^C to abort..."
+pacstrap /mnt base linux linux-firmware git openssh networkmanager gvim man-db man-pages texinfo grub sudo
+
+genfstab -U /mnt >> /mnt/etc/fstab
+
+echo -e "\nCheckpoint 3/5\nFollowing changes will be made with chroot:"
+echo -e "\t- Time zone"
+echo -e "\t- Locale"
+echo -e "\t- Hosts"
+read -p "Press any key to continue or ^C to abort..."
+
+arch-chroot /mnt ln -sf /usr/share/zoneinfo/Europe/Oslo /etc/localtime
+arch-chroot /mnt hwclock --systohc
+arch-chroot /mnt sed -i "s/^#en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/" /etc/locale.gen
+arch-chroot /mnt locale-gen
+read -p "Enter the hostname for this machine: " hostname
+[ -z "$hostname" ] && read -p "Enter the hostname for this machine: " hostname
+[ -z "$hostname" ] && hostname="myhostname"
+
+echo -e "echo \"LANG=en_US.UTF-8\" > /etc/locale.conf
+echo \"KEYMAP=no-latin1\" > /etc/vconsole.conf
+echo \"$hostname\" > /etc/hostname
+echo -e \"127.0.0.1\\\tlocalhost\\\n::1\\\t\\\tlocalhost\\\n127.0.0.1\\\t$hostname.localdomain\\\t$hostname\" >> /etc/hosts" > /mnt/chrootechos
+chmod +x /mnt/chrootechos
+arch-chroot /mnt ./chrootechos
+rm /mnt/chrootechos
+
+echo -e "\nCheckpoint 4/5\nFollowing changes will be made with chroot:"
+echo -e "\t- Initramfs"
+echo -e "\t- Root password"
+echo -e "\t- GRUB Bootloader"
+echo -e "\t- Microcode"
+read -p "Press any key to continue or ^C to abort..."
+
+arch-chroot /mnt mkinitcpio -P
+echo "Enter a password for root user"
+arch-chroot /mnt passwd
+
+if [ -n "$efip" ]; then
+	pacstrap /mnt efibootmgr
+	arch-chroot /mnt grub-install --target=x86_64-efi --efi-directory=efi --bootloader-id=GRUB 
+else
+    [ "$device" == *"nvme"* ] && device="$(printf "$device" | sed 's/.$//')"
+	arch-chroot /mnt grub-install --target=i386-pc /dev/$device
+fi
+arch-chroot /mnt grub-mkconfig -o /boot/grub/grub.cfg
+
+echo "Microcode install"
+read -p "CPU manufacturer: 1) Intel 2) AMD: " cpu
+if [ "$cpu" == "1" ]; then
+    pacstrap /mnt intel-ucode
+    arch-chroot /mnt grub-mkconfig -o /boot/grub/grub.cfg
+elif [ "$cpu" == "2" ]; then
+    pacstrap /mnt amd-ucode
+    arch-chroot /mnt grub-mkconfig -o /boot/grub/grub.cfg
+else
+    echo -e "Not valid option. Skipping...o\nRemember to install microcode later"
+fi
+
+echo -e "\nCheckpoint 5/5\nCreate your main user with sudo privileges"
+read -p "Enter user name: " user
+arch-chroot /mnt groupadd sudo
+arch-chroot /mnt useradd -m -G sudo $user
+arch-chroot /mnt sed -i 's/^# \(%sudo.*$\)/\1/' /etc/sudoers
+echo "Enter password for user $user"
+arch-chroot /mnt passwd $user
+
+echo -e "\nDone. Reboot to use your fresh install"
