@@ -1,0 +1,67 @@
+#!/bin/bash
+
+echo -e "\n### Welcome to shahzebs' Arch Linux configuration script ###\n"
+
+echo -e "\n# Cloning dotfiles repo:"
+git clone --bare https://github.com/shahzebs/dotfiles $HOME/.git-dotfiles
+function config {
+    /usr/bin/git --git-dir=$HOME/.git-dotfiles/ --work-tree=$HOME $@
+}
+mkdir -p $HOME/.dotfiles-backup
+config checkout
+if [ $? = 0 ]; then
+    echo "Checked out dotfiles.";
+else
+    echo "Backing up pre-existing dot files.";
+    config checkout 2>&1 | egrep "\s+\." | awk {'print $1'} | sed 's|\(\.*\w*/\).*$|\1|' | sort -u | xargs -I{} mv -f $HOME/{} $HOME/.dotfiles-backup/{}
+fi
+config checkout
+config config status.showUntrackedFiles no 
+echo "done"
+
+echo -e "\n# Synchronizing and installing needed packages from pacman:"
+$HOME/.scripts/pacmaninstallcommonpackages
+echo "done"
+
+fc-cache
+
+echo -e "\n# Installing yay (AUR helper):"
+mkdir -p $HOME/Downloads
+cd $HOME/Downloads
+git clone https://aur.archlinux.org/yay.git
+cd yay
+makepkg -si
+echo "done"
+
+# echo -e "\n# Synchronizing and installing needed packages from AUR:"
+# $HOME/.scripts/aurinstallcommonpackages
+# echo "done"
+
+echo -e "\n# Linking scripts to ~/.local/bin"
+$HOME/.scripts/linkscripts
+echo "done"
+
+echo -e "\n# Install vim-plug"
+curl -fLo ~/.vim/autoload/plug.vim --create-dirs https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+echo "done"
+
+echo -e "\n# Enable services:"
+pulseaudio --start
+echo "done"
+
+echo -e "\n# Configure ssh and git:"
+ssh-keygen
+git config --global user.name "shahzebs"
+git config --global user.email "shahzebs@stud.ntnu.no"
+config remote set-url origin git@github.com:shahzebs/dotfiles.git
+
+
+echo -e "\n# Install suckless tools (dwm, st, dmenu, dwmblocks):"
+cd $HOME/.suckless/dwm && make && sudo make install
+cd $HOME/.suckless/dwmblocks && make && sudo make install
+cd $HOME/.suckless/st && make && sudo make install
+cd $HOME/.suckless/dmenu && make && sudo make install
+echo "exec dwm" > $HOME/.xinitrc
+echo "done"
+
+echo -e "\n# Configuration is finished.\nLog out and back in to complete the setup"
