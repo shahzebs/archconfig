@@ -9,9 +9,9 @@ Assumptions:
   
 Run
 ```
-wget shahzebs.github.io/archconfig
+curl -L shahzebs.github.io/archconfig > installarchlinux
 ```
-to download install script (copy of `installarchlinux`). Execute the script by running `bash archconfig`.
+to download install script (copy of `installarchlinux`). Execute the script by running `bash installarchlinux`.
 The user will be taken through some interactable checkpoints and installation steps like partitioning disk, selecting favorite mirrors, entering hostname, creating a user and choosing passwords for both root and created user, etc.
 The Arch Linux install is a barebones install without any graphical environment like described in the [Installation Guide](https://wiki.archlinux.org/index.php/Installation_guide) of Arch Wiki.
 After the script exits succesfully, the user can boot into the fresh install and decide to clone this repository to continue configuring the system.
