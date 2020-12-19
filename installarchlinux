@@ -42,7 +42,7 @@ echo -e "\nCheckpoint 2/5\nFollowing changes will be made:"
 echo -e "\t- Install essential packages"
 echo -e "\t- Fstab"
 read -p "Press any key to continue or ^C to abort..."
-pacstrap /mnt base linux linux-firmware git openssh networkmanager gvim man-db man-pages texinfo grub sudo
+pacstrap /mnt base linux linux-firmware linux-headers git openssh networkmanager gvim man-db man-pages texinfo grub sudo
 
 genfstab -U /mnt >> /mnt/etc/fstab
 
