@@ -36,5 +36,5 @@ If configuring for an Arch Linux guest in Virtualbox remember to install Virtual
 - Begin by inserting the Guest Additions CD image from `Device > Insert Guest Additions CD image` in Virtualbox (versions of guest additions must be same in host and guest). 
 - Install the package `virtualbox-guest-iso` from within the Arch Linux guest.
 - Mount the image from within the Arch Linux guest to e.g. `/mnt/` and execute `VBoxLinuxAdditions.run` as root.
-- If for any reason the guest additions don't compile (e.g. due to missing `linux-header`), the vbox kernel modules can be recompiled with `rcvboxadd setup` as root.
+- If for any reason the guest additions don't compile (e.g. due to missing `linux-headers`), the vbox kernel modules can be recompiled with `rcvboxadd setup` as root.
 - Finally, run `VBoxClient-all` to activate services for shared clipboard, seamless mode, auto-resizing, etc. (shared clipboard must be enabled in Virtualbox settings too).
